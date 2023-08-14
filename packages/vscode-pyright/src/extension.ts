@@ -22,6 +22,7 @@ import {
     TextEditorEdit,
     Uri,
     window,
+    workspace,
 } from 'vscode';
 import {
     CancellationToken,
@@ -68,28 +69,45 @@ export async function activate(context: ExtensionContext) {
 
     cancellationStrategy = new FileBasedCancellationStrategy();
 
-    const bundlePath = context.asAbsolutePath(path.join('dist', 'server.js'));
-    const runOptions = { execArgv: [`--max-old-space-size=${defaultHeapSize}`] };
-    const debugOptions = { execArgv: ['--nolazy', '--inspect=6600', `--max-old-space-size=${defaultHeapSize}`] };
+    const config = workspace.getConfiguration('pyright');
 
-    // If the extension is launched in debug mode, then the debug server options are used.
-    const serverOptions: ServerOptions = {
-        run: {
-            module: bundlePath,
-            transport: TransportKind.ipc,
-            args: cancellationStrategy.getCommandLineArguments(),
-            options: runOptions,
-        },
-        // In debug mode, use the non-bundled code if it's present. The production
-        // build includes only the bundled package, so we don't want to crash if
-        // someone starts the production extension in debug mode.
-        debug: {
-            module: bundlePath,
-            transport: TransportKind.ipc,
-            args: cancellationStrategy.getCommandLineArguments(),
-            options: debugOptions,
-        },
-    };
+    let serverOptions: ServerOptions;
+
+    const langServerRunner = config.get<string>('langServerRunner');
+
+    if (config.get<boolean>('useExternalLangServer') && langServerRunner) {
+
+        window.showInformationMessage(`Using external language server via: ${langServerRunner}`);
+
+        serverOptions = {
+            command: langServerRunner,
+            args: [],
+            transport: TransportKind.stdio,
+        };
+    } else {
+        const bundlePath = context.asAbsolutePath(path.join('dist', 'server.js'));
+        const runOptions = { execArgv: [`--max-old-space-size=${defaultHeapSize}`] };
+        const debugOptions = { execArgv: ['--nolazy', '--inspect=6600', `--max-old-space-size=${defaultHeapSize}`] };
+
+        // If the extension is launched in debug mode, then the debug server options are used.
+        serverOptions = {
+            run: {
+                module: bundlePath,
+                transport: TransportKind.ipc,
+                args: cancellationStrategy.getCommandLineArguments(),
+                options: runOptions,
+            },
+            // In debug mode, use the non-bundled code if it's present. The production
+            // build includes only the bundled package, so we don't want to crash if
+            // someone starts the production extension in debug mode.
+            debug: {
+                module: bundlePath,
+                transport: TransportKind.ipc,
+                args: cancellationStrategy.getCommandLineArguments(),
+                options: debugOptions,
+            },
+        };
+    }
 
     // Options to control the language client
     const clientOptions: LanguageClientOptions = {

@@ -119,6 +119,16 @@
             "type": "object",
             "title": "Pyright",
             "properties": {
+                "pyright.useExternalLangServer":{
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Use an external language server executable"
+                },
+                "pyright.langServerRunner": {
+                    "type": "string",
+                    "default": "",
+                    "description": "runner (for a possibly remote) pyright langServer"
+                },
                 "python.analysis.autoImportCompletions": {
                     "type": "boolean",
                     "default": true,
